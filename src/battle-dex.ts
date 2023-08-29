@@ -180,7 +180,7 @@ const Dex = new class implements ModdedDex {
 	pokeballs: string[] | null = null;
 
 	//TODO we might want to move this to something like data/petmods
-	readonly modResourcePrefix = 'https://raw.githubusercontent.com/scoopapa/dh/master/data/mods/';
+	readonly modResourcePrefix = 'https://raw.githubusercontent.com/scoopapa/dh2/master/data/mods/';
 
 
 	resourcePrefix = (() => {
@@ -468,6 +468,7 @@ const Dex = new class implements ModdedDex {
 		if ((!mod || !window.ModSprites[id][mod]) && !overrideStandard) {
 			for (const modName in window.ModSprites[id]) {
 				if (window.ModSprites[id][modName].includes(folder)) return modName;
+				if (window.ModSprites[id][modName].includes('ani' + folder)) return modName;
 			}
 		}
 		if (mod && window.ModSprites[id][mod] && window.ModSprites[id][mod].includes(folder)) return mod;
@@ -653,9 +654,16 @@ const Dex = new class implements ModdedDex {
 			spriteData.cryurl = `sprites/${options.mod}/audio/${toID(species.baseSpecies)}`;
 			spriteData.cryurl += '.mp3';
 		}
-
+		
+		let fakeAnim = false;
+		if (fakeSprite && window.ModSprites[id][options.mod].includes('ani' + facing)){
+			fakeAnim = true;
+			animationData[facing] = {};
+			animationData[facing].w = 192;
+			animationData[facing].h = 192;
+		}
 		if (animationData[facing + 'f'] && options.gender === 'F') facing += 'f';
-		let allowAnim = !fakeSprite && !Dex.prefs('noanim') && !Dex.prefs('nogif');
+		let allowAnim = (!fakeSprite || (fakeSprite && fakeAnim)) && !Dex.prefs('noanim') && !Dex.prefs('nogif');
 		if (allowAnim && spriteData.gen >= 6) spriteData.pixelated = false;
 		if (allowAnim && animationData[facing] && spriteData.gen >= 5) {
 			if (facing.slice(-1) === 'f') name += '-f';
@@ -664,6 +672,7 @@ const Dex = new class implements ModdedDex {
 			spriteData.w = animationData[facing].w;
 			spriteData.h = animationData[facing].h;
 			spriteData.url += dir + '/' + name + '.gif';
+			console.log(animationData[facing]);
 		} else {
 			// There is no entry or enough data in pokedex-mini.js
 			// Handle these in case-by-case basis; either using BW sprites or matching the played gen.
@@ -971,7 +980,7 @@ class ModdedDex {
 			if (this.cache.Abilities.hasOwnProperty(id)) return this.cache.Abilities[id];
 
 			let data = {...Dex.abilities.get(name)};
-
+			
 			for (let i = Dex.gen - 1; i >= this.gen; i--) {
 				const table = window.BattleTeambuilderTable[`gen${i}`];
 				if (id in table.overrideAbilityData) {
@@ -983,8 +992,14 @@ class ModdedDex {
 				if (table.overrideAbilityData && id in table.overrideAbilityData) {
 					Object.assign(data, table.overrideAbilityData[id]);
 				}
+				if (table.overrideAbilityDesc && id in table.overrideAbilityDesc) {
+					data.shortDesc = table.overrideAbilityDesc[id];
+				}
+				if (table.fullAbilityName && id in table.fullAbilityName) {
+					data.name = table.fullAbilityName[id];
+					data.exists = true;
+				}
 			}
-
 			const ability = new Ability(id, name, data);
 			this.cache.Abilities[id] = ability;
 			return ability;

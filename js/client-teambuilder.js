@@ -1389,6 +1389,7 @@
 			}
 		},
 		addPokemon: function () {
+			console.log("add pokemon");
 			if (!this.curTeam) return;
 			var team = this.curSetList;
 			if (!team.length || team[team.length - 1].species) {
@@ -1566,7 +1567,7 @@
 			var buf = '';
 			for (var i = 0; i < this.clipboardCount(); i++) {
 				var res = this.clipboard[i];
-				var species = Dex.species.get(res.species);
+				var species = this.curTeam.dex.species.get(res.species);
 
 				buf += '<div class="result" data-id="' + i + '">';
 				buf += '<div class="section"><span class="icon" style="' + Dex.getPokemonIcon(species.name, false, this.curTeam.mod) + '"></span>';
@@ -3010,7 +3011,7 @@
 				} else if (id in BattleMovedex && format && format.endsWith("trademarked")) {
 					val = BattleMovedex[id].name;
 				} else {
-					val = (id in BattleAbilities ? BattleAbilities[id].name : '');
+					val = (id in BattleAbilities ? this.curTeam.dex.abilities.get(e.currentTarget.value).name : '');
 				}
 				break;
 			case 'item':
@@ -3019,11 +3020,11 @@
 				} else if (id in BattleAbilities && format && format.endsWith("multibility")) {
 					val = BattleAbilities[id].name;
 				} else {
-					val = (id in BattleItems ? BattleItems[id].name : '');
+					val = (id in BattleItems ? this.curTeam.dex.items.get(e.currentTarget.value).name : '');
 				}
 				break;
 			case 'move1': case 'move2': case 'move3': case 'move4':
-				val = (id in BattleMovedex ? BattleMovedex[id].name : '');
+				val = (id in BattleMovedex ? this.curTeam.dex.moves.get(e.currentTarget.value).name : '');
 				break;
 			}
 			if (!val) {
@@ -3326,7 +3327,6 @@
 				set.item = '';
 			}
 			set.ability = species.abilities['0'];
-
 			set.moves = [];
 			set.evs = {};
 			set.ivs = {};
@@ -3514,9 +3514,9 @@
 			this.$el.html(buf).css({'max-width': (4 + spriteSize) * width, 'height': 42 + (4 + spriteSize) * height});
 		},
 		setForm: function (form) {
-			var species = Dex.species.get(this.curSet.species);
+			var species = this.room.curTeam.dex.species.get(this.curSet.species);
 			if (form && form !== species.form) {
-				this.curSet.species = Dex.species.get(species.baseSpecies + form).name;
+				this.curSet.species = this.room.curTeam.dex.species.get(species.baseSpecies + form).name;
 			} else if (!form) {
 				this.curSet.species = species.baseSpecies;
 			}

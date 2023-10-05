@@ -319,6 +319,16 @@ const Dex = new class implements ModdedDex {
 			'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Psychic', 'Dark', 'Dragon',
 		].includes(type) ? 'Special' : 'Physical';
 	}
+	getKEPCategory(type: string) {
+		return [
+			'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Psychic', 'Dark', 'Dragon', 'Fairy'
+		].includes(type) ? 'Special' : 'Physical';
+	}
+	getCSICategory(type: string) {
+		return [
+			'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Psychic', 'Dark', 'Dragon', 'Cosmic'
+		].includes(type) ? 'Special' : 'Physical';
+	}
 
 	items = {
 		get: (nameOrItem: string | Item | null | undefined): Item => {
@@ -462,10 +472,11 @@ const Dex = new class implements ModdedDex {
 		}
 		return false;
 	}
-
-	getSpriteMod(mod: string, id: string, folder: string, overrideStandard: boolean = false) {
+	// getSpriteMod is used to find the correct mod folder for the sprite url to use
+	// id is the name of the pokemon, type, or item. folder refers to "front", or "back-shiny" etc. overrideStandard is false for custom elements and true for canon elements
+	getSpriteMod(mod: string, id: string, folder: string, overrideStandard: boolean = false) { 
 		if (!window.ModSprites[id]) return '';
-		if ((!mod || !window.ModSprites[id][mod]) && !overrideStandard) {
+		if ((!mod || !window.ModSprites[id][mod]) && !overrideStandard) { // for custom elements only, it will use sprites from another mod if the mod provided doesn't have one
 			for (const modName in window.ModSprites[id]) {
 				if (window.ModSprites[id][modName].includes(folder)) return modName;
 				if (window.ModSprites[id][modName].includes('ani' + folder)) return modName;
@@ -723,7 +734,7 @@ const Dex = new class implements ModdedDex {
 			num = BattlePokedex[id].num;
 		}
 		if (num < 0) num = 0;
-		if (num > 1010) num = 0;
+		if (num > 1017) num = 0;
 
 		if (window.BattlePokemonIconIndexes?.[id]) {
 			num = BattlePokemonIconIndexes[id];
@@ -773,7 +784,7 @@ const Dex = new class implements ModdedDex {
 		let species = window.BattlePokedexAltForms && window.BattlePokedexAltForms[id] ? window.BattlePokedexAltForms[id] : Dex.species.get(id);
 		mod = this.getSpriteMod(mod, id, 'icons', species.exists !== false);
 		if (mod) return `background:transparent url(${this.modResourcePrefix}${mod}/sprites/icons/${id}.png) no-repeat scroll -0px -0px${fainted}`;
-		return `background:transparent url(${Dex.resourcePrefix}sprites/pokemonicons-sheet.png?v11) no-repeat scroll -${left}px -${top}px${fainted}`;
+		return `background:transparent url(${Dex.resourcePrefix}sprites/pokemonicons-sheet.png?v14) no-repeat scroll -${left}px -${top}px${fainted}`;
 	}
 
 	getTeambuilderSpriteData(pokemon: any, gen: number = 0, mod: string = ''): TeambuilderSpriteData {
@@ -852,7 +863,7 @@ const Dex = new class implements ModdedDex {
 
 		let top = Math.floor(num / 16) * 24;
 		let left = (num % 16) * 24;
-		return 'background:transparent url(' + Dex.resourcePrefix + 'sprites/itemicons-sheet.png?g9) no-repeat scroll -' + left + 'px -' + top + 'px';
+		return 'background:transparent url(' + Dex.resourcePrefix + 'sprites/itemicons-sheet.png?v1) no-repeat scroll -' + left + 'px -' + top + 'px';
 	}
 
 	getTypeIcon(type: string | null, b?: boolean, mod: string = '') { // b is just for utilichart.js
@@ -860,7 +871,7 @@ const Dex = new class implements ModdedDex {
 		if (!type) type = '???';
 		let sanitizedType = type.replace(/\?/g, '%3f');
 		mod = this.getSpriteMod(mod, toID(type), 'types');
-		if (mod) {
+		if (mod && (type !== '???')) {
 			return `<img src="${this.modResourcePrefix}${mod}/sprites/types/${toID(type)}.png" alt="${type}" class="pixelated${b ? ' b' : ''}" />`;
 		} else {
 			return `<img src="${Dex.resourcePrefix}sprites/types/${sanitizedType}.png" alt="${type}" height="14" width="32" class="pixelated${b ? ' b' : ''}" />`;
@@ -930,9 +941,18 @@ class ModdedDex {
 				}
 			}
 			if (this.gen <= 3 && data.category !== 'Status') {
-				data.category = Dex.getGen3Category(data.type);
+				switch(this.modid) {
+					case 'gen1expansionpack':
+						data.category = Dex.getKEPCategory(data.type);
+						break;
+					case 'gen2crystalseviiislands':
+						data.category = Dex.getCSICategory(data.type);	
+						break;
+					default: 
+						data.category = Dex.getGen3Category(data.type);
+						break;
+				}
 			}
-
 			const move = new Move(id, name, data);
 			this.cache.Moves[id] = move;
 			return move;
@@ -1050,8 +1070,9 @@ class ModdedDex {
 			if (this.gen < 3 || this.modid === 'gen7letsgo') {
 				data.abilities = {0: "None"};
 			}
-	
-			if (id in table.overrideTier) data.tier = table.overrideTier[id];
+			
+			if (table.overrideTier && id in table.overrideTier) data.tier = table.overrideTier[id];
+			if (table.doubles?.overrideTier && id in table.doubles.overrideTier) data.doublesTier = table.doubles.overrideTier[id];
 			if (!data.tier && id.slice(-5) === 'totem') {
 				data.tier = this.species.get(id.slice(0, -5)).tier;
 			}

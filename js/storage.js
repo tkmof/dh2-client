@@ -1368,7 +1368,8 @@ Storage.exportTeam = function (team, gen, hidestats) {
 			text += 'Gigantamax: Yes  \n';
 		}
 		if (gen === 9) {
-			text += 'Tera Type: ' + (curSet.teraType || Dex.species.get(curSet.species).types[0]) + "  \n";
+			var species = Dex.species.get(curSet.species);
+			text += 'Tera Type: ' + (species.forceTeraType || curSet.teraType || species.types[0]) + "  \n";
 		}
 		if (!hidestats) {
 			var first = true;
@@ -1398,13 +1399,12 @@ Storage.exportTeam = function (team, gen, hidestats) {
 					var move = curSet.moves[j];
 					if (move.substr(0, 13) === 'Hidden Power ' && move.substr(0, 14) !== 'Hidden Power [') {
 						hpType = move.substr(13);
-						if (!exports.BattleTypeChart[hpType].HPivs) {
-							alert("That is not a valid Hidden Power type.");
+						if (!Dex.types.isName(hpType)) {
+							alert(move + " is not a valid Hidden Power type.");
 							continue;
 						}
 						for (var stat in BattleStatNames) {
-							if ((curSet.ivs[stat] === undefined ? 31 : curSet.ivs[stat]) !== (exports.BattleTypeChart[hpType].HPivs[stat] || 31)) {
-								defaultIvs = false;
+							if ((curSet.ivs[stat] === undefined ? 31 : curSet.ivs[stat]) !== (Dex.types.get(hpType).HPivs[stat] || 31)) {
 								break;
 							}
 						}

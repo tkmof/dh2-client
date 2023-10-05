@@ -1257,7 +1257,7 @@
 					}
 				}
 				if (this.curTeam.gen === 9) {
-					buf += '<span class="detailcell"><label>Tera Type</label>' + (set.teraType || species.types[0]) + '</span>';
+					buf += '<span class="detailcell"><label>Tera Type</label>' + (species.forceTeraType || set.teraType || species.types[0]) + '</span>';
 				}
 			}
 			buf += '</button></div></div>';
@@ -1409,9 +1409,13 @@
 			this.curChartName = '';
 			this.update();
 			this.$('input[name=pokemon]').select();
-			if (this.curTeam.format.includes('monotype')) {
+			var formatid = this.curTeam.format;
+			if (formatid.includes('monotype') || formatid.includes('monothreat')) {
 				var typeTable = [];
 				var dex = this.curTeam.dex;
+				if (formatid.includes('monothreat')) {
+					typeTable = [dex.types.get(formatid.slice(14)).name || 'Normal'];
+				}
 				for (var i = 0; i < this.curSetList.length; i++) {
 					var set = this.curSetList[i];
 					var species = dex.species.get(set.species);
@@ -1419,13 +1423,15 @@
 						species = dex.species.get(species.baseSpecies);
 					}
 					if (!species.exists) continue;
-					if (i === 0) {
-						typeTable = species.types;
-					} else {
-						typeTable = typeTable.filter(function (type) {
-							return species.types.includes(type);
-						});
-						if (!typeTable.length) break;
+					if (!formatid.includes('monothreat')) {
+						if (i === 0) {
+							typeTable = species.types;
+						} else {
+							typeTable = typeTable.filter(function (type) {
+								return species.types.includes(type);
+							});
+							if (!typeTable.length) break;
+						}
 					}
 					if (this.curTeam.gen >= 6) {
 						var item = dex.items.get(set.item);
@@ -2716,13 +2722,19 @@
 			}
 
 			if (this.curTeam.gen === 9) {
-				buf += '<div class="formrow"><label class="formlabel" title="Tera Type">Tera Type:</label><div><select name="teratype">';
-				var types = Dex.types.all();
-				var teraType = set.teraType || species.types[0];
-				for (var i = 0; i < types.length; i++) {
-					buf += '<option value="' + types[i].name + '"' + (teraType === types[i].name ? ' selected="selected"' : '') + '>' + types[i].name + '</option>';
+				buf += '<div class="formrow"><label class="formlabel" title="Tera Type">Tera Type:</label><div>';
+				if (species.forceTeraType) {
+					buf += species.forceTeraType;
+				} else {
+					buf += '<select name="teratype">';
+					var types = Dex.types.all();
+					var teraType = set.teraType || species.types[0];
+					for (var i = 0; i < types.length; i++) {
+						buf += '<option value="' + types[i].name + '"' + (teraType === types[i].name ? ' selected="selected"' : '') + '>' + types[i].name + '</option>';
+					}
+					buf += '</select>';
 				}
-				buf += '</select></div></div>';
+				buf += '</div></div>';
 			}
 
 			buf += '</form>';
@@ -2833,7 +2845,7 @@
 					}
 				}
 				if (this.curTeam.gen === 9) {
-					buf += '<span class="detailcell"><label>Tera Type</label>' + (set.teraType || species.types[0]) + '</span>';
+					buf += '<span class="detailcell"><label>Tera Type</label>' + (species.forceTeraType || set.teraType || species.types[0]) + '</span>';
 				}
 			}
 			this.$('button[name=details]').html(buf);
@@ -3053,6 +3065,10 @@
 				if (baseFormat.substr(0, 3) === 'gen') baseFormat = baseFormat.substr(4);
 				if (baseFormat.substr(0, 4) === 'bdsp') baseFormat = baseFormat.substr(4);
 				if (baseFormat.substr(0, 8) === 'pokebank') baseFormat = baseFormat.substr(8);
+				if (baseFormat.substr(0, 6) === 'natdex') baseFormat = baseFormat.substr(6);
+				if (baseFormat.substr(0, 11) === 'nationaldex') baseFormat = baseFormat.substr(11);
+				if (baseFormat.substr(-5) === 'draft') baseFormat = baseFormat.substr(0, baseFormat.length - 5);
+				if (!baseFormat) baseFormat = 'ou';
 				if (this.curTeam && this.curTeam.format) {
 					if (baseFormat === 'battlespotsingles' || baseFormat === 'battlespotdoubles' || baseFormat.substr(0, 3) === 'vgc' ||
 						baseFormat === 'battlefestivaldoubles') {
@@ -3084,12 +3100,16 @@
 				if (baseFormat.substr(0, 3) === 'gen') baseFormat = baseFormat.substr(4);
 				if (baseFormat.substr(0, 4) === 'bdsp') baseFormat = baseFormat.substr(4);
 				if (baseFormat.substr(0, 8) === 'pokebank') baseFormat = baseFormat.substr(8);
+				if (baseFormat.substr(0, 6) === 'natdex') baseFormat = baseFormat.substr(6);
+				if (baseFormat.substr(0, 11) === 'nationaldex') baseFormat = baseFormat.substr(11);
+				if (baseFormat.substr(-5) === 'draft') baseFormat = baseFormat.substr(0, baseFormat.length - 5);
+				if (!baseFormat) baseFormat = 'ou';
 				if (this.curTeam && this.curTeam.format) {
 					if (baseFormat === 'battlespotsingles' || baseFormat === 'battlespotdoubles' || baseFormat.substr(0, 3) === 'vgc' ||
 						baseFormat === 'battlefestivaldoubles') {
 						set.level = 50;
 					}
-					if (baseFormat.substr(0, 2) === 'lc') set.level = 5;
+					if (baseFormat.startsWith('lc') || baseFormat.endsWith('lc')) set.level = 5;
 				}
 				if (set.happiness) delete set.happiness;
 				if (set.shiny) delete set.shiny;
@@ -3304,10 +3324,14 @@
 				if (baseFormat.substr(0, 3) === 'gen') baseFormat = baseFormat.substr(4);
 				if (baseFormat.substr(0, 4) === 'bdsp') baseFormat = baseFormat.substr(4);
 				if (baseFormat.substr(0, 8) === 'pokebank') baseFormat = baseFormat.substr(8);
+				if (baseFormat.substr(0, 6) === 'natdex') baseFormat = baseFormat.substr(6);
+				if (baseFormat.substr(0, 11) === 'nationaldex') baseFormat = baseFormat.substr(11);
+				if (baseFormat.substr(-5) === 'draft') baseFormat = baseFormat.substr(0, baseFormat.length - 5);
+				if (!baseFormat) baseFormat = 'ou';
 				if (this.curTeam && this.curTeam.format) {
 					if (baseFormat.substr(0, 10) === 'battlespot' && baseFormat.substr(0, 19) !== 'battlespotspecial13' ||
 						baseFormat.substr(0, 3) === 'vgc' || baseFormat.substr(0, 14) === 'battlefestival') set.level = 50;
-					if (baseFormat.substr(0, 2) === 'lc' || baseFormat.substr(0, 5) === 'caplc' || baseFormat.substr(-2) === 'lc') set.level = 5;
+					if (baseFormat.startsWith('lc') || baseFormat.endsWith('lc')) set.level = 5;
 					if (baseFormat.substr(0, 19) === 'battlespotspecial17') set.level = 1;
 					if (format && format.teambuilderLevel) {
 						set.level = format.teambuilderLevel;
